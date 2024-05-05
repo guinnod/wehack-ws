@@ -33,7 +33,7 @@ io.on("connection", (socket) => {
         // Emit notification to the specific user
         console.log(userId);
 
-        io.to(userId).emit("notification", "You have a new notification!");
+        io.to(userId).emit("notification", "Ваша очередь подошла!");
     });
 
     socket.on("disconnect", () => {
