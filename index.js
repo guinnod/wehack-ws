@@ -1,35 +1,46 @@
 const dotenv = require("dotenv");
 dotenv.config();
+const cors = require("cors");
 
 const express = require("express");
-const cors = require("cors");
-const axios = require("axios");
+const http = require("http");
+const socketIo = require("socket.io");
 
 const app = express();
-const port = process.env.PORT || 8080;
-
 app.use(cors());
 
-app.get("/proxy", async (req, res) => {
-    const url = req.query.url;
-    if (!url) {
-        return res.status(400).send("URL parameter is required");
-    }
-
-    try {
-        const response = await axios.get(url, {
-            responseType: "arraybuffer",
-        });
-        const contentType = response.headers["content-type"];
-
-        res.setHeader("Content-Type", contentType);
-        res.send(response.data);
-    } catch (error) {
-        console.error("Failed to fetch data:", error);
-        res.status(500).send("Failed to fetch data");
-    }
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        credentials: true,
+    },
 });
 
-app.listen(port, () => {
-    console.log(`CORS Proxy server running at port: ${port}`);
+const PORT = process.env.PORT || 8080;
+
+io.on("connection", (socket) => {
+    console.log("New client connected", socket.id);
+    socket.on("joinRoom", (roomId) => {
+        socket.join(roomId);
+        console.log(`User ${socket.id} joined room ${roomId}`);
+    });
+    socket.on("leaveRoom", (roomId) => {
+        socket.leave(roomId);
+        console.log(`User ${socket.id} left room ${roomId}`);
+    });
+    socket.on("send_notification", (userId) => {
+        // Emit notification to the specific user
+        console.log(userId);
+
+        io.to(userId).emit("notification", "You have a new notification!");
+    });
+
+    socket.on("disconnect", () => {
+        console.log("Client disconnected");
+    });
+});
+
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
